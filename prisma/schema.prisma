@@ -1,0 +1,193 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Campaigns
+model Campaign {
+  id              String         @id @default(uuid())
+  name            String
+  totalDuration   Int            // hours
+  sessionDuration Int            // hours
+  currentSession  Int            @default(1)
+  gameState       Json?          // Flexible storage for complex state
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  characters      Character[]
+  sessions        Session[]
+  enemies         Enemy[]
+  chatHistory     ChatMessage[]
+  generatedImages GeneratedImage[]
+}
+
+// Characters (Players)
+model Character {
+  id            String   @id @default(uuid())
+  campaignId    String
+  playerName    String   // A, B, P, D
+  characterName String
+  characterType String   // Fairy, Rune Knight Fighter, etc.
+  characterClass String? // Support Caster, Tank Fighter, etc.
+
+  // Stats
+  hpCurrent     Int
+  hpMax         Int
+  manaCurrent   Int
+  manaMax       Int
+  armor         Int
+  speed         String
+  xp            Int      @default(0)
+  gold          Int      @default(0)
+  level         Int      @default(1)
+
+  // Details
+  backstory     String?  @db.Text
+  appearance    Json?    // height, features, traits
+  stats         Json?    // Flexible stats storage
+  portraitUrl   String?  // AI-generated character portrait
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  campaign      Campaign       @relation(fields: [campaignId], references: [id])
+  skills        Skill[]
+  inventory     InventoryItem[]
+  companions    Companion[]
+
+  @@index([campaignId])
+}
+
+// Skills & Abilities
+model Skill {
+  id              String   @id @default(uuid())
+  characterId     String
+  name            String
+  description     String   @db.Text
+  type            String   // active, passive, once_per_session, special
+  manaCost        Int      @default(0)
+  usedThisSession Boolean  @default(false)
+  metadata        Json?    // damage, range, effects, saveDC, etc.
+
+  character       Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+}
+
+// Inventory Items
+model InventoryItem {
+  id          String   @id @default(uuid())
+  characterId String
+  itemName    String
+  itemType    String   // weapon, armor, utility, magical, consumable, quest_item
+  quantity    Int      @default(1)
+  equipped    Boolean  @default(false)
+  effects     Json?    // stat bonuses, abilities
+  description String?  @db.Text
+  rarity      String?  // Common, Uncommon, Rare, Epic, Legendary
+  imageUrl    String?  // AI-generated item image
+
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+}
+
+// Companions (like Ropey the rope familiar)
+model Companion {
+  id           String   @id @default(uuid())
+  characterId  String
+  name         String
+  type         String   // Animated Rope Familiar, etc.
+  hpCurrent    Int
+  hpMax        Int
+  armor        Int?
+  speed        String?
+  abilities    Json?    // Array of ability names
+  personality  String?  @db.Text
+  description  String?  @db.Text
+
+  character    Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+}
+
+// Enemies & Monsters
+model Enemy {
+  id            String   @id @default(uuid())
+  campaignId    String
+  name          String
+  type          String   // Beast, Goblin, Dragon, etc.
+  hpCurrent     Int
+  hpMax         Int
+  armor         Int
+  abilities     Json     // Array of abilities
+  statusEffects Json?    // stunned, blinded, etc.
+  isAlive       Boolean  @default(true)
+  loot          Json?    // Items dropped when defeated
+  xpReward      Int      @default(0)
+  imageUrl      String?  // AI-generated enemy image
+
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([isAlive])
+}
+
+// Game Sessions
+model Session {
+  id            String    @id @default(uuid())
+  campaignId    String
+  sessionNumber Int
+  startTime     DateTime  @default(now())
+  endTime       DateTime?
+  dmSummary     String?   @db.Text
+  majorEvents   Json?     // Array of event descriptions
+  lootGained    Json?     // Items acquired
+  xpGained      Int       @default(0)
+
+  campaign      Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, sessionNumber])
+  @@index([campaignId])
+}
+
+// Chat History (for ChatGPT context)
+model ChatMessage {
+  id            String   @id @default(uuid())
+  campaignId    String
+  sessionNumber Int
+  role          String   // user, assistant, system
+  content       String   @db.Text
+  metadata      Json?    // player actions, dice rolls, etc.
+  timestamp     DateTime @default(now())
+
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, sessionNumber])
+  @@index([timestamp])
+}
+
+// Generated Images (AI image generation cache)
+model GeneratedImage {
+  id          String   @id @default(uuid())
+  campaignId  String
+  type        String   // character, scene, enemy, item, moment
+  prompt      String   @db.Text
+  imageUrl    String   // Permanent storage URL (Vercel Blob)
+  metadata    Json?    // characterId, enemyId, etc.
+  generatedAt DateTime @default(now())
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([type])
+}
