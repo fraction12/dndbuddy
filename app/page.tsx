@@ -33,15 +33,18 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-12">
-            <button className="fantasy-border parchment-bg px-8 py-4 text-lg font-bold hover:scale-105 transition-transform">
-              Begin Your Adventure →
-            </button>
+          <div className="mt-12 flex gap-4 justify-center">
+            <a
+              href="/demo"
+              className="fantasy-border parchment-bg px-8 py-4 text-lg font-bold hover:scale-105 transition-transform inline-block"
+            >
+              Try DM Demo →
+            </a>
           </div>
 
           <div className="mt-8 text-fantasy-parchment/70 text-sm">
-            <p>Status: 🏗️ Setting up the realm...</p>
-            <p className="mt-2">Next.js 14 • TypeScript • Tailwind CSS</p>
+            <p>Status: ✨ ChatGPT DM is LIVE!</p>
+            <p className="mt-2">Streaming narration • Text-to-speech • Real-time responses</p>
           </div>
         </div>
       </div>
